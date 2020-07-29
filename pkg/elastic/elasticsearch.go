@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/elastic/go-elasticsearch/v6/esapi"
-	"github.com/linclaus/elasticprom/model"
+	"github.com/linclaus/elasticprom/pkg/model"
 
 	es6 "github.com/elastic/go-elasticsearch/v6"
 )

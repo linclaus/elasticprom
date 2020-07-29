@@ -4,9 +4,9 @@ import (
 	"flag"
 	"strings"
 
-	"github.com/linclaus/elasticprom/model"
 	"github.com/linclaus/elasticprom/pkg/elastic"
 	"github.com/linclaus/elasticprom/pkg/metrics"
+	"github.com/linclaus/elasticprom/pkg/model"
 	"github.com/linclaus/elasticprom/pkg/server"
 )
 

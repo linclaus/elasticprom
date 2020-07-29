@@ -1,7 +1,7 @@
 package metrics
 
 import (
-	"github.com/linclaus/elasticprom/model"
+	"github.com/linclaus/elasticprom/pkg/model"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
