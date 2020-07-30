@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"os"
 	"strings"
 
 	"github.com/linclaus/elasticprom/pkg/elastic"
@@ -17,10 +18,11 @@ type Args struct {
 }
 
 func main() {
-	args := Args{}
+	args := Args{
+		ElasticsearchUrl: os.Getenv("ELASTICSEARCH-URL"),
+	}
 	flag.StringVar(&args.Addr, "listen-address", ":8080", "The address to listen on for HTTP requests.")
 	flag.BoolVar(&args.Debug, "debug", true, "debug or not.")
-	flag.StringVar(&args.ElasticsearchUrl, "elasticsearch-url", "http://localhost:9200", "the address of elastic cluster endpoints witch separate by a comma")
 
 	flag.Parse()
 
