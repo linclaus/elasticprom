@@ -17,9 +17,10 @@ var (
 	ElasticMetricCountVec = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "elastic_metric_gauge_vec",
 		Help: "elastic count",
-	}, []string{"namespace", "container", "strategy_id"})
+	}, []string{"keyword", "strategy_id"})
 )
 
+//Init metric
 func Init(metricChan chan model.ElasticMetric) {
 	// Register the summary and the histogram with Prometheus's default registry.
 	MyMetricGauge.Set(0)
@@ -35,6 +36,6 @@ func Init(metricChan chan model.ElasticMetric) {
 		MyMetricGauge.Inc()
 		MyMetricGaugeVec.WithLabelValues("l1", "l2").Inc()
 		MyMetricGaugeVec.WithLabelValues("l2", "l3").Inc()
-		ElasticMetricCountVec.WithLabelValues(em.Namespace, em.Container, em.StrategyId).Set(em.Count)
+		ElasticMetricCountVec.WithLabelValues(em.Keyword, em.StrategyId).Set(em.Count)
 	}
 }
