@@ -49,6 +49,14 @@ func (s Server) AddStrategyMetric(w http.ResponseWriter, r *http.Request) {
 	if s.debug {
 		log.Println("Received webhook payload", string(body))
 	}
+	sm:=&StrategyMetric{
+		StrategyId   string
+		container    string
+		Keyword      string
+		tickInterval time.Duration
+		esDuration   time.Duration
+		quit         chan struct{}
+	}
 
-	elastic.AddMetric()
+	elastic.AddMetric(sm)
 }

@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 type ElasticMetric struct {
 	Keyword    string
 	StrategyId string
@@ -7,10 +9,12 @@ type ElasticMetric struct {
 }
 
 type StrategyMetic struct {
-	StrategyId      string
-	Keyword         string
-	intervalMinutes int
-	quit            chan struct{}
+	StrategyId   string
+	container    string
+	Keyword      string
+	tickInterval time.Duration
+	esDuration   time.Duration
+	quit         chan struct{}
 }
 
 type StrategyMetricMap map[string]StrategyMetic
