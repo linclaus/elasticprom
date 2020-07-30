@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/elastic/go-elasticsearch/v6/esapi"
@@ -15,10 +16,14 @@ import (
 )
 
 var (
-	client *es6.Client
-	ch     chan model.ElasticMetric
+	client            *es6.Client
+	ch                chan model.ElasticMetric
+	dateTemplate      = "2006-01-02T15:04:05"
+	indexDateTemplate = "2006.01.02"
+	indexPrefix       = "filebeat-6.8.3-"
 )
 
+// Init elastic
 func Init(metricChan chan model.ElasticMetric, addresses []string) {
 	ch = metricChan
 	cfg := es6.Config{
@@ -33,7 +38,7 @@ func Init(metricChan chan model.ElasticMetric, addresses []string) {
 	defer res.Body.Close()
 	log.Println(res)
 
-	tick := time.NewTicker(30 * time.Second)
+	tick := time.NewTicker(5 * time.Second)
 	defer tick.Stop()
 	for {
 		select {
@@ -57,6 +62,8 @@ func Init(metricChan chan model.ElasticMetric, addresses []string) {
 }
 
 func countTest() float64 {
+	now := time.Now().UTC()
+	from := now.Add(-1 * time.Hour).UTC()
 	query := map[string]interface{}{
 		"query": map[string]interface{}{
 			"bool": map[string]interface{}{
@@ -70,8 +77,8 @@ func countTest() float64 {
 					}},
 					map[string]interface{}{"range": map[string]interface{}{
 						"@timestamp": map[string]interface{}{
-							"gt": "2020-07-29T01:01:16.923Z",
-							"lt": "2020-07-29T02:01:16.923Z",
+							"gt": from.Format(dateTemplate),
+							"lt": now.Format(dateTemplate),
 						}},
 					},
 				},
@@ -83,7 +90,7 @@ func countTest() float64 {
 	log.Printf("jsonBody: %s", jsonBody)
 
 	req := esapi.CountRequest{
-		Index:        []string{"filebeat-6.8.3-2020.07.29"},
+		Index:        []string{strings.Join([]string{indexPrefix, from.Format(indexDateTemplate)}, ""), strings.Join([]string{indexPrefix, now.Format(indexDateTemplate)}, "")},
 		DocumentType: []string{"doc"},
 		Body:         bytes.NewReader(jsonBody),
 	}
