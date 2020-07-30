@@ -37,11 +37,11 @@ func Init(metricChan chan model.ElasticMetric, addresses []string) {
 	}
 	defer res.Body.Close()
 	log.Println(res)
-	AddMetric(5*time.Second, 1*time.Hour, "gotest", "hello", "123")
+	AddMetric(make(chan struct{}), 5*time.Second, 1*time.Hour, "gotest", "hello", "123")
 }
 
 //AddMetric function
-func AddMetric(tickInterval time.Duration, esDuration time.Duration, container string, keyword string, strategyId string) {
+func AddMetric(quit <-chan struct{}, tickInterval time.Duration, esDuration time.Duration, container string, keyword string, strategyId string) {
 	tick := time.NewTicker(tickInterval)
 	defer tick.Stop()
 	for {
@@ -58,7 +58,6 @@ func AddMetric(tickInterval time.Duration, esDuration time.Duration, container s
 			default:
 				log.Println("send message timeout")
 			}
-
 		}
 	}
 }

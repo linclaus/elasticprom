@@ -21,7 +21,7 @@ var (
 )
 
 //Init metric
-func Init(metricChan chan model.ElasticMetric) {
+func Init(metricChan <-chan model.ElasticMetric) {
 	// Register the summary and the histogram with Prometheus's default registry.
 	MyMetricGauge.Set(0)
 	prometheus.MustRegister(MyMetricGauge)

@@ -7,8 +7,10 @@ type ElasticMetric struct {
 }
 
 type StrategyMetic struct {
-	ElasticMetric
-	quit chan bool
+	StrategyId      string
+	Keyword         string
+	intervalMinutes int
+	quit            chan struct{}
 }
 
 type StrategyMetricMap map[string]StrategyMetic
