@@ -27,6 +27,7 @@ func New(debug bool) Server {
 		// elasticMetricMap: make(map[string]model.StrategyMetricMap),
 	}
 	r.Handle("/metrics", promhttp.Handler())
+	r.HandleFunc("/add_metric", s.AddStrategyMetric).Methods("POST")
 
 	return s
 }

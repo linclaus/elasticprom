@@ -37,15 +37,15 @@ func Init(metricChan chan model.ElasticMetric, addresses []string) {
 	}
 	defer res.Body.Close()
 	log.Println(res)
-	sm := model.StrategyMetic{
-		StrategyId:   "123",
-		Container:    "gotest",
-		Keyword:      "hello",
-		TickInterval: 30 * time.Second,
-		ESDuration:   2 * time.Hour,
-		Quit:         make(chan struct{}),
-	}
-	AddMetric(sm)
+	// sm := model.StrategyMetic{
+	// 	StrategyId:   "123",
+	// 	Container:    "gotest",
+	// 	Keyword:      "hello",
+	// 	TickInterval: 30 * time.Second,
+	// 	ESDuration:   2 * time.Hour,
+	// 	Quit:         make(chan struct{}),
+	// }
+	// AddMetric(sm)
 }
 
 //AddMetric function
