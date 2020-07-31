@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/linclaus/elasticprom/pkg/elastic"
@@ -14,7 +15,7 @@ import (
 
 type Server struct {
 	r                *mux.Router
-	elasticMetricMap *model.StrategyMetricMap
+	elasticMetricMap model.StrategyMetricMap
 	debug            bool
 }
 
@@ -23,7 +24,7 @@ func New(debug bool) Server {
 	s := Server{
 		debug: debug,
 		r:     r,
-		elasticMetricMap:make(map[string]model.StrategyMetricMap)
+		// elasticMetricMap: make(map[string]model.StrategyMetricMap),
 	}
 	r.Handle("/metrics", promhttp.Handler())
 
@@ -49,13 +50,13 @@ func (s Server) AddStrategyMetric(w http.ResponseWriter, r *http.Request) {
 	if s.debug {
 		log.Println("Received webhook payload", string(body))
 	}
-	sm:=&StrategyMetric{
-		StrategyId   string
-		container    string
-		Keyword      string
-		tickInterval time.Duration
-		esDuration   time.Duration
-		quit         chan struct{}
+	sm := model.StrategyMetic{
+		StrategyId:   "123",
+		Container:    "gotest",
+		Keyword:      "hello",
+		TickInterval: 30 * time.Second,
+		ESDuration:   2 * time.Hour,
+		Quit:         make(chan struct{}),
 	}
 
 	elastic.AddMetric(sm)

@@ -10,11 +10,11 @@ type ElasticMetric struct {
 
 type StrategyMetic struct {
 	StrategyId   string
-	container    string
+	Container    string
 	Keyword      string
-	tickInterval time.Duration
-	esDuration   time.Duration
-	quit         chan struct{}
+	TickInterval time.Duration
+	ESDuration   time.Duration
+	Quit         chan struct{}
 }
 
-type StrategyMetricMap map[string]StrategyMetic
+type StrategyMetricMap *map[string]StrategyMetic

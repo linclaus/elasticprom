@@ -37,20 +37,28 @@ func Init(metricChan chan model.ElasticMetric, addresses []string) {
 	}
 	defer res.Body.Close()
 	log.Println(res)
-	AddMetric(make(chan struct{}), 5*time.Second, 1*time.Hour, "gotest", "hello", "123")
+	sm := model.StrategyMetic{
+		StrategyId:   "123",
+		Container:    "gotest",
+		Keyword:      "hello",
+		TickInterval: 30 * time.Second,
+		ESDuration:   2 * time.Hour,
+		Quit:         make(chan struct{}),
+	}
+	AddMetric(sm)
 }
 
 //AddMetric function
-func AddMetric(quit <-chan struct{}, tickInterval time.Duration, esDuration time.Duration, container string, keyword string, strategyId string) {
-	tick := time.NewTicker(tickInterval)
+func AddMetric(sm model.StrategyMetic) {
+	tick := time.NewTicker(sm.TickInterval)
 	defer tick.Stop()
 	for {
 		select {
 		case <-tick.C:
-			count := countByKeyword(esDuration, container, keyword)
+			count := countByKeyword(sm.ESDuration, sm.Container, sm.Keyword)
 			em := model.ElasticMetric{
-				Keyword:    keyword,
-				StrategyId: strategyId,
+				Keyword:    sm.Keyword,
+				StrategyId: sm.StrategyId,
 				Count:      count,
 			}
 			select {
