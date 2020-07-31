@@ -16,5 +16,3 @@ type StrategyMetic struct {
 	ESDuration   time.Duration
 	Quit         chan struct{}
 }
-
-type StrategyMetricMap *map[string]StrategyMetic

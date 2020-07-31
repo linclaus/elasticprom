@@ -49,9 +49,10 @@ func Init(metricChan chan model.ElasticMetric, addresses []string) {
 }
 
 //AddMetric function
-func AddMetric(sm model.StrategyMetic) {
+func AddMetric(sm *model.StrategyMetic) {
 	tick := time.NewTicker(sm.TickInterval)
 	defer tick.Stop()
+LOOP:
 	for {
 		select {
 		case <-tick.C:
@@ -66,6 +67,9 @@ func AddMetric(sm model.StrategyMetic) {
 			default:
 				log.Println("send message timeout")
 			}
+		case <-sm.Quit:
+			log.Println("stop strategy: %s", sm.StrategyId)
+			break LOOP
 		}
 	}
 }
