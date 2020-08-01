@@ -35,6 +35,7 @@ func main() {
 		elasticUrls := strings.Split(args.ElasticsearchUrl, ",")
 		driver, _ = db.ConnectES(elasticUrls)
 	}
+	driver.GetVersion()
 
 	s := server.New(args.Debug, driver)
 	s.Start(args.Addr)

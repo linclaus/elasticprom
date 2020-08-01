@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -16,7 +17,7 @@ import (
 
 type Server struct {
 	r                *mux.Router
-	elasticMetricMap map[string]*model.StrategyMetic
+	elasticMetricMap *model.ElasticMetricMap
 	db               db.Storer
 	debug            bool
 	metricChan       chan model.ElasticMetric
@@ -28,12 +29,12 @@ func New(debug bool, db db.Storer) Server {
 		debug:            debug,
 		r:                r,
 		db:               db,
-		elasticMetricMap: make(map[string]*model.StrategyMetic),
+		elasticMetricMap: &model.ElasticMetricMap{},
 		metricChan:       make(chan model.ElasticMetric, 1024),
 	}
 	r.Handle("/metrics", promhttp.Handler())
 	r.HandleFunc("/add_metric", s.AddStrategyMetric).Methods("POST")
-	r.HandleFunc("/delete_metric", s.DeleteStrategyMetric).Methods("DELETE")
+	r.HandleFunc("/delete_metric/{id}", s.DeleteStrategyMetric).Methods("DELETE")
 	return s
 }
 
@@ -66,37 +67,28 @@ func (s Server) AddStrategyMetric(w http.ResponseWriter, r *http.Request) {
 	if s.debug {
 		log.Println("Received webhook payload", string(body))
 	}
-	sm := s.elasticMetricMap["123"]
+	smr := &model.StrategyMetricRequest{}
+	json.Unmarshal([]byte(body), smr)
+	sm := s.elasticMetricMap.Get(smr.StrategyId)
 	if sm == nil {
 		sm = &model.StrategyMetic{
-			StrategyId:   "123",
-			Container:    "gotest",
-			Keyword:      "hello",
-			TickInterval: 5 * time.Second,
-			ESDuration:   2 * time.Hour,
+			StrategyId:   smr.StrategyId,
+			Container:    smr.Container,
+			Keyword:      smr.Keyword,
+			TickInterval: time.Duration(smr.TickInterval) * time.Second,
+			ESDuration:   time.Duration(smr.ESDuration) * time.Hour,
 			Quit:         make(chan struct{}),
 		}
-		s.elasticMetricMap["123"] = sm
+		s.elasticMetricMap.Set(smr.StrategyId, sm)
 	}
 	go s.db.GetMetric(s.metricChan, sm)
 }
 
 func (s Server) DeleteStrategyMetric(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Printf("Failed to read payload: %s\n", err)
-		http.Error(w, fmt.Sprintf("Failed to read payload: %s", err), http.StatusBadRequest)
-		return
-	}
-
-	if s.debug {
-		log.Println("Received webhook payload", string(body))
-	}
-	sm := s.elasticMetricMap["123"]
+	vars := mux.Vars(r)
+	sm := s.elasticMetricMap.Get(vars["id"])
 	if sm != nil {
 		close(sm.Quit)
-		delete(s.elasticMetricMap, "123")
+		s.elasticMetricMap.Delete(sm.StrategyId)
 	}
 }
