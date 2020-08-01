@@ -30,7 +30,7 @@ func New(debug bool, elasticAddress []string) Server {
 		r:                r,
 		elasticDB:        elasticDB,
 		elasticMetricMap: make(map[string]*model.StrategyMetic),
-		metricChan:       make(chan model.ElasticMetric),
+		metricChan:       make(chan model.ElasticMetric, 1024),
 	}
 	r.Handle("/metrics", promhttp.Handler())
 	r.HandleFunc("/add_metric", s.AddStrategyMetric).Methods("POST")
@@ -40,14 +40,13 @@ func New(debug bool, elasticAddress []string) Server {
 
 // Start starts a new server on the given address
 func (s Server) Start(address string) {
-	go InitMetric()
+	go s.initMetric()
 	log.Println("Starting listener on", address)
 	log.Fatal(http.ListenAndServe(address, s.r))
 }
 
-func InitMetric() {
-	metricChan := make(chan model.ElasticMetric, 1024)
-	for em := range metricChan {
+func (s Server) initMetric() {
+	for em := range s.metricChan {
 		metrics.MyMetricGauge.Inc()
 		metrics.MyMetricGaugeVec.WithLabelValues("l1", "l2").Inc()
 		metrics.MyMetricGaugeVec.WithLabelValues("l2", "l3").Inc()
