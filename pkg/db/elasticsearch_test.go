@@ -1,4 +1,4 @@
-package elastic
+package db
 
 import (
 	"bytes"
@@ -9,73 +9,29 @@ import (
 	"strings"
 	"time"
 
+	es6 "github.com/elastic/go-elasticsearch/v6"
 	"github.com/elastic/go-elasticsearch/v6/esapi"
 	"github.com/linclaus/elasticprom/pkg/model"
-
-	es6 "github.com/elastic/go-elasticsearch/v6"
 )
 
 var (
-	client            *es6.Client
-	ch                chan model.ElasticMetric
-	dateTemplate      = "2006-01-02T15:04:05"
-	indexDateTemplate = "2006.01.02"
-	indexPrefix       = "filebeat-6.8.3-"
+	client *es6.Client
+	ch     chan model.ElasticMetric
 )
 
-// Init elastic
-func Init(metricChan chan model.ElasticMetric, addresses []string) {
-	ch = metricChan
-	cfg := es6.Config{
-		Addresses: addresses,
-	}
-	client, _ = es6.NewClient(cfg)
-
-	res, err := client.Info()
-	if err != nil {
-		log.Fatalf("Error getting response: %s", err)
-	}
-	defer res.Body.Close()
-	log.Println(res)
-	AddMetric(5*time.Second, 1*time.Hour, "gotest", "hello", "123")
-}
-
-//AddMetric function
-func AddMetric(tickInterval time.Duration, esDuration time.Duration, container string, keyword string, strategyId string) {
-	tick := time.NewTicker(tickInterval)
-	defer tick.Stop()
-	for {
-		select {
-		case <-tick.C:
-			count := countByKeyword(esDuration, container, keyword)
-			em := model.ElasticMetric{
-				Keyword:    keyword,
-				StrategyId: strategyId,
-				Count:      count,
-			}
-			select {
-			case ch <- em:
-			default:
-				log.Println("send message timeout")
-			}
-
-		}
-	}
-}
-
-func countByKeyword(d time.Duration, container string, keyword string) float64 {
+func Testcount() float64 {
 	now := time.Now().UTC()
-	from := now.Add(-1 * d).UTC()
+	from := now.Add(-1 * time.Hour).UTC()
 	query := map[string]interface{}{
 		"query": map[string]interface{}{
 			"bool": map[string]interface{}{
 				"must": []map[string]interface{}{
 					map[string]interface{}{
 						"term": map[string]interface{}{
-							"kubernetes.container.name": container,
+							"kubernetes.container.name": "gotest",
 						}},
 					map[string]interface{}{"match_phrase": map[string]interface{}{
-						"message": keyword,
+						"message": "hello",
 					}},
 					map[string]interface{}{"range": map[string]interface{}{
 						"@timestamp": map[string]interface{}{
