@@ -5,9 +5,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/linclaus/elasticprom/pkg/elastic"
-	"github.com/linclaus/elasticprom/pkg/metrics"
-	"github.com/linclaus/elasticprom/pkg/model"
 	"github.com/linclaus/elasticprom/pkg/server"
 )
 
@@ -26,12 +23,7 @@ func main() {
 
 	flag.Parse()
 
-	metricChan := make(chan model.ElasticMetric, 1024)
-
 	elasticUrls := strings.Split(args.ElasticsearchUrl, ",")
-	go elastic.Init(metricChan, elasticUrls)
-	go metrics.Init(metricChan)
-
-	s := server.New(args.Debug)
+	s := server.New(args.Debug, elasticUrls)
 	s.Start(args.Addr)
 }

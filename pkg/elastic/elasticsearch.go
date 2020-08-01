@@ -15,55 +15,53 @@ import (
 	es6 "github.com/elastic/go-elasticsearch/v6"
 )
 
+type ElasticDB struct {
+	esClient *es6.Client
+}
+
 var (
-	client            *es6.Client
-	ch                chan model.ElasticMetric
 	dateTemplate      = "2006-01-02T15:04:05"
 	indexDateTemplate = "2006.01.02"
 	indexPrefix       = "filebeat-6.8.3-"
 )
 
-// Init elastic
-func Init(metricChan chan model.ElasticMetric, addresses []string) {
-	ch = metricChan
+func ConnectES(addresses []string) (*ElasticDB, error) {
 	cfg := es6.Config{
 		Addresses: addresses,
 	}
-	client, _ = es6.NewClient(cfg)
-
-	res, err := client.Info()
+	client, err := es6.NewClient(cfg)
 	if err != nil {
-		log.Fatalf("Error getting response: %s", err)
+		return nil, err
+	} else {
+		return &ElasticDB{esClient: client}, nil
+	}
+}
+
+func (es ElasticDB) GetVersion() error {
+	res, err := es.esClient.Info()
+	if err != nil {
+		return err
 	}
 	defer res.Body.Close()
 	log.Println(res)
-	// sm := model.StrategyMetic{
-	// 	StrategyId:   "123",
-	// 	Container:    "gotest",
-	// 	Keyword:      "hello",
-	// 	TickInterval: 30 * time.Second,
-	// 	ESDuration:   2 * time.Hour,
-	// 	Quit:         make(chan struct{}),
-	// }
-	// AddMetric(sm)
+	return nil
 }
 
-//AddMetric function
-func AddMetric(sm *model.StrategyMetic) {
+func (es ElasticDB) GetMetric(metricChan chan<- model.ElasticMetric, sm *model.StrategyMetic) {
 	tick := time.NewTicker(sm.TickInterval)
 	defer tick.Stop()
 LOOP:
 	for {
 		select {
 		case <-tick.C:
-			count := countByKeyword(sm.ESDuration, sm.Container, sm.Keyword)
+			count := es.countByKeyword(sm.ESDuration, sm.Container, sm.Keyword)
 			em := model.ElasticMetric{
 				Keyword:    sm.Keyword,
 				StrategyId: sm.StrategyId,
 				Count:      count,
 			}
 			select {
-			case ch <- em:
+			case metricChan <- em:
 			default:
 				log.Println("send message timeout")
 			}
@@ -74,7 +72,7 @@ LOOP:
 	}
 }
 
-func countByKeyword(d time.Duration, container string, keyword string) float64 {
+func (es ElasticDB) countByKeyword(d time.Duration, container string, keyword string) float64 {
 	now := time.Now().UTC()
 	from := now.Add(-1 * d).UTC()
 	query := map[string]interface{}{
@@ -107,7 +105,7 @@ func countByKeyword(d time.Duration, container string, keyword string) float64 {
 		DocumentType: []string{"doc"},
 		Body:         bytes.NewReader(jsonBody),
 	}
-	res, err := req.Do(context.Background(), client)
+	res, err := req.Do(context.Background(), es.esClient)
 	if err != nil {
 		log.Fatalf("Error getting response: %s", err)
 	}
