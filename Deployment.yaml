@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: elasticprom
+  name: elasticprom
+  namespace: moebius-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticprom
+  template:
+    metadata:
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "http-metrics"
+        prometheus.io/scrape: "true"
+      labels:
+        app: elasticprom
+    spec:
+      containers:
+      - image: docker.gridsumdissector.com/moebius/elasticprom
+        imagePullPolicy: Always
+        name: elasticprom
+        env:
+        - name: ELASTICSEARCH-URL
+          value: "http://10.136.104.115:22956"
+        ports:
+        - containerPort: 8080
+          name: http-metrics          
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+      serviceAccountName: mantis-daemon
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: elasticprom
+  name: elasticprom
+  namespace: moebius-system
+spec:
+  ports:
+  - name: http-metrics
+    port: 8080
+    protocol: TCP
+    targetPort: http-metrics
+  selector:
+    app: elasticprom  
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: elasticprom-podmonitor
+  namespace: moebius-system
+spec:
+  namespaceSelector:
+    matchNames:
+    - moebius-system
+  podMetricsEndpoints:
+  - interval: 5s
+    path: /metrics
+    targetPort: 8080
+    scheme: http
+  selector:
+    matchLabels:
+      app: elasticprom

@@ -1,4 +1,4 @@
-package elastic
+package db
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/elastic/go-elasticsearch/v6/esapi"
@@ -14,64 +15,77 @@ import (
 	es6 "github.com/elastic/go-elasticsearch/v6"
 )
 
-var (
-	client *es6.Client
-	ch     chan model.ElasticMetric
-)
+type ElasticDB struct {
+	esClient *es6.Client
+}
 
-func Init(metricChan chan model.ElasticMetric, addresses []string) {
-	ch = metricChan
+func ConnectES(addresses []string) (*ElasticDB, error) {
 	cfg := es6.Config{
 		Addresses: addresses,
 	}
-	client, _ = es6.NewClient(cfg)
-
-	res, err := client.Info()
+	client, err := es6.NewClient(cfg)
 	if err != nil {
-		log.Fatalf("Error getting response: %s", err)
+		return nil, err
+	} else {
+		return &ElasticDB{esClient: client}, nil
+	}
+}
+
+func (es ElasticDB) GetVersion() error {
+	res, err := es.esClient.Info()
+	if err != nil {
+		return err
 	}
 	defer res.Body.Close()
 	log.Println(res)
+	return nil
+}
 
-	tick := time.NewTicker(30 * time.Second)
+func (es ElasticDB) GetMetric(metricChan chan<- model.ElasticMetric, sm *model.StrategyMetic) {
+	tick := time.NewTicker(sm.TickInterval)
 	defer tick.Stop()
+LOOP:
 	for {
 		select {
 		case <-tick.C:
-			count := countTest()
+			count := es.countByKeyword(sm.ESDuration, sm.Container, sm.Keyword)
+			log.Printf("count : %f", count)
 			em := model.ElasticMetric{
-				Namespace:  "namespace",
-				Container:  "container",
-				StrategyId: "123",
+				Keyword:    sm.Keyword,
+				StrategyId: sm.StrategyId,
 				Count:      count,
 			}
 			select {
-			case ch <- em:
+			case metricChan <- em:
+				log.Println("send message successful")
 			default:
 				log.Println("send message timeout")
 			}
-
+		case <-sm.Quit:
+			log.Println("stop strategy: %s", sm.StrategyId)
+			break LOOP
 		}
 	}
-
 }
 
-func countTest() float64 {
+func (es ElasticDB) countByKeyword(d time.Duration, container string, keyword string) float64 {
+	now := time.Now().UTC()
+	from := now.Add(-1 * d).UTC()
 	query := map[string]interface{}{
 		"query": map[string]interface{}{
 			"bool": map[string]interface{}{
 				"must": []map[string]interface{}{
 					map[string]interface{}{
 						"term": map[string]interface{}{
-							"kubernetes.container.name": "gotest",
+							"kubernetes.container.name": container,
 						}},
 					map[string]interface{}{"match_phrase": map[string]interface{}{
-						"message": "hello",
+						"message": keyword,
 					}},
 					map[string]interface{}{"range": map[string]interface{}{
 						"@timestamp": map[string]interface{}{
-							"gt": "2020-07-29T01:01:16.923Z",
-							"lt": "2020-07-29T02:01:16.923Z",
+							"gt": from.Format(dateTemplate),
+							"lt": now.Format(dateTemplate),
 						}},
 					},
 				},
@@ -83,11 +97,11 @@ func countTest() float64 {
 	log.Printf("jsonBody: %s", jsonBody)
 
 	req := esapi.CountRequest{
-		Index:        []string{"filebeat-6.8.3-2020.07.29"},
+		Index:        []string{strings.Join([]string{indexPrefix, from.Format(indexDateTemplate)}, ""), strings.Join([]string{indexPrefix, now.Format(indexDateTemplate)}, "")},
 		DocumentType: []string{"doc"},
 		Body:         bytes.NewReader(jsonBody),
 	}
-	res, err := req.Do(context.Background(), client)
+	res, err := req.Do(context.Background(), es.esClient)
 	if err != nil {
 		log.Fatalf("Error getting response: %s", err)
 	}
@@ -98,7 +112,6 @@ func countTest() float64 {
 		jsonResp, _ := ioutil.ReadAll(res.Body)
 		json.Unmarshal([]byte(jsonResp), &jsonData)
 		count, _ := jsonData["count"].(float64)
-		log.Printf("count : %f", count)
 		return count
 	}
 	log.Println(res.String())
