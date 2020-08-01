@@ -1,4 +1,4 @@
-package elastic_test
+package db
 
 import (
 	"bytes"
@@ -15,11 +15,8 @@ import (
 )
 
 var (
-	client            *es6.Client
-	ch                chan model.ElasticMetric
-	dateTemplate      = "2006-01-02T15:04:05"
-	indexDateTemplate = "2006.01.02"
-	indexPrefix       = "filebeat-6.8.3-"
+	client *es6.Client
+	ch     chan model.ElasticMetric
 )
 
 func Testcount() float64 {

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/linclaus/elasticprom/pkg/elastic"
+	"github.com/linclaus/elasticprom/pkg/db"
 	"github.com/linclaus/elasticprom/pkg/metrics"
 	"github.com/linclaus/elasticprom/pkg/model"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -17,18 +17,17 @@ import (
 type Server struct {
 	r                *mux.Router
 	elasticMetricMap map[string]*model.StrategyMetic
-	elasticDB        *elastic.ElasticDB
+	db               db.Storer
 	debug            bool
 	metricChan       chan model.ElasticMetric
 }
 
-func New(debug bool, elasticAddress []string) Server {
+func New(debug bool, db db.Storer) Server {
 	r := mux.NewRouter()
-	elasticDB, _ := elastic.ConnectES(elasticAddress)
 	s := Server{
 		debug:            debug,
 		r:                r,
-		elasticDB:        elasticDB,
+		db:               db,
 		elasticMetricMap: make(map[string]*model.StrategyMetic),
 		metricChan:       make(chan model.ElasticMetric, 1024),
 	}
@@ -79,7 +78,7 @@ func (s Server) AddStrategyMetric(w http.ResponseWriter, r *http.Request) {
 		}
 		s.elasticMetricMap["123"] = sm
 	}
-	go s.elasticDB.GetMetric(s.metricChan, sm)
+	go s.db.GetMetric(s.metricChan, sm)
 }
 
 func (s Server) DeleteStrategyMetric(w http.ResponseWriter, r *http.Request) {

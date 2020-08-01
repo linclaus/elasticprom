@@ -1,4 +1,4 @@
-package elastic
+package db
 
 import (
 	"bytes"
@@ -18,12 +18,6 @@ import (
 type ElasticDB struct {
 	esClient *es6.Client
 }
-
-var (
-	dateTemplate      = "2006-01-02T15:04:05"
-	indexDateTemplate = "2006.01.02"
-	indexPrefix       = "filebeat-6.8.3-"
-)
 
 func ConnectES(addresses []string) (*ElasticDB, error) {
 	cfg := es6.Config{
@@ -55,6 +49,7 @@ LOOP:
 		select {
 		case <-tick.C:
 			count := es.countByKeyword(sm.ESDuration, sm.Container, sm.Keyword)
+			log.Printf("count : %f", count)
 			em := model.ElasticMetric{
 				Keyword:    sm.Keyword,
 				StrategyId: sm.StrategyId,
@@ -62,6 +57,7 @@ LOOP:
 			}
 			select {
 			case metricChan <- em:
+				log.Println("send message successful")
 			default:
 				log.Println("send message timeout")
 			}
@@ -116,7 +112,6 @@ func (es ElasticDB) countByKeyword(d time.Duration, container string, keyword st
 		jsonResp, _ := ioutil.ReadAll(res.Body)
 		json.Unmarshal([]byte(jsonResp), &jsonData)
 		count, _ := jsonData["count"].(float64)
-		log.Printf("count : %f", count)
 		return count
 	}
 	log.Println(res.String())
