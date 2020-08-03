@@ -32,8 +32,8 @@ func New(debug bool, db db.Storer) Server {
 		elasticMetricMap: &model.ElasticMetricMap{},
 		metricChan:       make(chan model.ElasticMetric, 1024),
 	}
-	r.Handle("/metrics", promhttp.Handler())
-	r.HandleFunc("/add_metric", s.AddStrategyMetric).Methods("POST")
+	r.Handle("/metrics", s.metricHandler(promhttp.Handler()))
+	r.HandleFunc("/add_metric", s.handleFuncInterceptor(s.AddStrategyMetric)).Methods("POST")
 	r.HandleFunc("/delete_metric/{id}", s.DeleteStrategyMetric).Methods("DELETE")
 	return s
 }
@@ -51,6 +51,23 @@ func (s Server) initMetric() {
 		metrics.MyMetricGaugeVec.WithLabelValues("l1", "l2").Inc()
 		metrics.MyMetricGaugeVec.WithLabelValues("l2", "l3").Inc()
 		metrics.ElasticMetricCountVec.WithLabelValues(em.Keyword, em.StrategyId).Set(em.Count)
+	}
+}
+
+func (s Server) metricHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println("before metric handler")
+		next.ServeHTTP(w, r)
+		log.Println("after metric handler")
+	})
+
+}
+
+func (s Server) handleFuncInterceptor(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Println("before handlerFunc")
+		h(w, r)
+		log.Println("after handlerFunc")
 	}
 }
 
